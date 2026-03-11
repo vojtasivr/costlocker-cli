@@ -6,10 +6,10 @@ import httpx
 
 from costlocker_cli.models import Project, ScheduleEntry
 
+BASE_URL = "https://beta.graphql.costlocker.com/graphql"
 
 class CostlockerClient:
-    def __init__(self, api_key: str, base_url: str = "https://beta.graphql.costlocker.com/graphql"):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, api_key: str):
         self.headers = {
             "Authorization": f"Static {api_key}",
             "Content-Type": "application/json",
@@ -90,6 +90,6 @@ class CostlockerClient:
             return {"success": False, "entry": entry, "error": str(e)}
 
     def _post(self, payload: dict) -> dict:
-        response = httpx.post(self.base_url, headers=self.headers, json=payload, timeout=10)
+        response = httpx.post(BASE_URL, headers=self.headers, json=payload, timeout=10)
         response.raise_for_status()
         return response.json()

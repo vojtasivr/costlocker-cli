@@ -67,7 +67,7 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
         console.print("[yellow]No entries to log.[/yellow]")
         raise typer.Exit(0)
 
-    client = CostlockerClient(config["costlocker_api_key"], config["costlocker_base_url"])
+    client = CostlockerClient(config["costlocker_api_key"])
     schedule_config = config.get("schedule", {})
     schedule = prepare_schedule(
         target_date,

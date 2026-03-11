@@ -16,7 +16,7 @@ def map_command() -> None:
         console.print("[red]No config found. Run `costlocker setup` first.[/red]")
         raise typer.Exit(1)
 
-    client = CostlockerClient(config["costlocker_api_key"], config["costlocker_base_url"])
+    client = CostlockerClient(config["costlocker_api_key"])
 
     console.print("\n[bold]Configure event -> project mappings[/bold]")
     console.print("Type the calendar event name and assign it to a Costlocker project.\n")

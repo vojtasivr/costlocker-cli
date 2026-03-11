@@ -49,10 +49,6 @@ def setup_config():
         default=existing.get("costlocker_api_key", ""),
         hide_input=True,
     )
-    base_url = typer.prompt(
-        "Costlocker API base URL",
-        default=existing.get("costlocker_base_url", "https://api.costlocker.com/graphql"),
-    )
 
     console.print("\n[bold]Step 2: Google Calendar[/bold]")
     console.print("To set up Google Calendar access:")
@@ -101,7 +97,6 @@ def setup_config():
 
     config = {
         "costlocker_api_key": api_key,
-        "costlocker_base_url": base_url,
         "schedule": {"work_start": work_start, "work_end": work_end, "lunch_start": lunch_start},
         "mappings": existing.get("mappings", {}),
     }

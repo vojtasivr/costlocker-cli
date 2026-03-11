@@ -58,7 +58,6 @@ Config is stored at `~/.costlocker/config.json`:
 ```json
 {
   "costlocker_api_key": "your-api-key",
-  "costlocker_base_url": "https://api.costlocker.com/graphql",
   "mappings": {
     "Standup": {
       "budget_id": 123,
