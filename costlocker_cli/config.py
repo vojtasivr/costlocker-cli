@@ -23,6 +23,18 @@ def save_config(config: Dict):
         json.dump(config, f, indent=2)
 
 
+def _prompt_time(label: str, default: str) -> str:
+    while True:
+        value = typer.prompt(f"{label} (HH:MM)", default=default)
+        try:
+            h, m = value.split(":")
+            if 0 <= int(h) <= 23 and 0 <= int(m) <= 59:
+                return f"{int(h):02d}:{int(m):02d}"
+        except ValueError:
+            pass
+        console.print(f"[red]Invalid time '{value}', expected HH:MM (e.g. 08:30)[/red]")
+
+
 def setup_config():
     """Interactive setup wizard."""
     console.print("\n[bold]Costlocker CLI Setup[/bold]\n")
@@ -57,9 +69,9 @@ def setup_config():
 
     console.print("\n[bold]Step 3: Work schedule[/bold]")
     existing_schedule = existing.get("schedule", {})
-    work_start = typer.prompt("Work day start time (HH:MM)", default=existing_schedule.get("work_start", "08:30"))
-    work_end = typer.prompt("Work day end time (HH:MM)", default=existing_schedule.get("work_end", "17:00"))
-    lunch_start = typer.prompt("Lunch break start time (HH:MM)", default=existing_schedule.get("lunch_start", "11:00"))
+    work_start = _prompt_time("Work day start time", default=existing_schedule.get("work_start", "08:30"))
+    work_end = _prompt_time("Work day end time", default=existing_schedule.get("work_end", "17:00"))
+    lunch_start = _prompt_time("Lunch break start time", default=existing_schedule.get("lunch_start", "11:00"))
 
     console.print("\n[bold]Step 4: PagerDuty (optional)[/bold]")
     setup_pagerduty = typer.confirm("Set up PagerDuty on-call sync?", default=bool(existing.get("pagerduty")))
