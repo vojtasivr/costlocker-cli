@@ -18,7 +18,7 @@ class EventMapper:
         mapping = self._find_mapping(event.event_name)
         return TimeEntry(
             id=event.id,
-            event_name=event.event_name,
+            event_name=f"{mapping.prefix}{event.event_name}" if mapping else event.event_name,
             description=event.description,
             start=event.start,
             end=event.end,
