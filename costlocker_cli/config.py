@@ -25,7 +25,7 @@ def save_config(config: Dict):
 
 def setup_config():
     """Interactive setup wizard."""
-    console.print("\n[bold]🔧 Costlocker CLI Setup[/bold]\n")
+    console.print("\n[bold]Costlocker CLI Setup[/bold]\n")
 
     existing = load_config() or {}
 
@@ -51,19 +51,54 @@ def setup_config():
 
     credentials_path = Path.home() / ".costlocker" / "google_credentials.json"
     if credentials_path.exists():
-        console.print("[green]✅ Google credentials file found.[/green]")
+        console.print("[green]Google credentials file found.[/green]")
     else:
-        console.print("[yellow]⚠️ Google credentials file not found yet. Add it before running sync.[/yellow]")
+        console.print("[yellow]Google credentials file not found yet. Add it before running sync.[/yellow]")
+
+    console.print("\n[bold]Step 3: Work schedule[/bold]")
+    existing_schedule = existing.get("schedule", {})
+    work_start = typer.prompt("Work day start time (HH:MM)", default=existing_schedule.get("work_start", "08:30"))
+    work_end = typer.prompt("Work day end time (HH:MM)", default=existing_schedule.get("work_end", "17:00"))
+    lunch_start = typer.prompt("Lunch break start time (HH:MM)", default=existing_schedule.get("lunch_start", "11:00"))
+
+    console.print("\n[bold]Step 4: PagerDuty (optional)[/bold]")
+    setup_pagerduty = typer.confirm("Set up PagerDuty on-call sync?", default=bool(existing.get("pagerduty")))
+
+    existing_pd = existing.get("pagerduty", {})
+    pagerduty: Optional[Dict] = None
+
+    if setup_pagerduty:
+        pd_api_key = typer.prompt("PagerDuty API key", default=existing_pd.get("api_key", ""), hide_input=True)
+        schedule_ids_str = typer.prompt(
+            "PagerDuty schedule IDs (comma-separated)",
+            default=",".join(existing_pd.get("schedule_ids", [])),
+        )
+        schedule_ids = [s.strip() for s in schedule_ids_str.split(",") if s.strip()]
+
+        user_id = existing_pd.get("user_id", "")
+        if pd_api_key and not user_id:
+            try:
+                from costlocker_cli.services.pagerduty import PagerDutyClient
+                with console.status("Fetching PagerDuty user..."):
+                    user_id = PagerDutyClient(pd_api_key).get_current_user_id()
+                console.print(f"[green]PagerDuty user ID: {user_id}[/green]")
+            except Exception as e:
+                console.print(f"[yellow]Could not fetch PagerDuty user ID: {e}[/yellow]")
+
+        pagerduty = {"api_key": pd_api_key, "user_id": user_id, "schedule_ids": schedule_ids}
 
     config = {
         "costlocker_api_key": api_key,
         "costlocker_base_url": base_url,
+        "schedule": {"work_start": work_start, "work_end": work_end, "lunch_start": lunch_start},
         "mappings": existing.get("mappings", {}),
     }
+    if pagerduty:
+        config["pagerduty"] = pagerduty
 
     save_config(config)
-    console.print(f"\n✅ Config saved to [cyan]{CONFIG_PATH}[/cyan]")
+    console.print(f"\nConfig saved to [cyan]{CONFIG_PATH}[/cyan]")
     console.print("\nNext steps:")
-    console.print("  • Run [bold]costlocker map[/bold] to configure event → project mappings")
+    console.print("  • Run [bold]costlocker map[/bold] to configure event -> project mappings")
     console.print("  • Run [bold]costlocker sync[/bold] to sync today's events")
     console.print("  • Run [bold]costlocker sync --date 2025-02-28[/bold] to sync a specific date\n")
