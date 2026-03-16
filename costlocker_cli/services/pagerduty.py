@@ -50,6 +50,10 @@ class PagerDutyClient:
         schedule_name = data["schedule"]["name"]
         raw_entries = data["schedule"]["final_schedule"]["rendered_schedule_entries"]
 
+        is_weekday = since.weekday() < 5  # Monday=0, Friday=4
+        office_start = since.replace(hour=8) if is_weekday else None
+        office_end = since.replace(hour=16) if is_weekday else None
+
         result = []
         for entry in raw_entries:
             if entry["user"]["id"] != user_id:
@@ -62,17 +66,43 @@ class PagerDutyClient:
             entry_start = max(entry_start, since)
             entry_end = min(entry_end, until)
 
-            duration_minutes = int((entry_end - entry_start).total_seconds() / 60)
-            if duration_minutes <= 0:
+            base_id = f"pd-{schedule_id}-{entry['start']}"
+
+            if office_start is None:
+                # Weekend: log as-is
+                duration_minutes = int((entry_end - entry_start).total_seconds() / 60)
+                if duration_minutes > 0:
+                    result.append(CalendarEvent(
+                        id=base_id,
+                        event_name=schedule_name,
+                        description=f"PagerDuty on-call: {schedule_name}",
+                        start=entry_start,
+                        end=entry_end,
+                        duration_minutes=duration_minutes,
+                    ))
                 continue
 
-            result.append(CalendarEvent(
-                id=f"pd-{schedule_id}-{entry['start']}",
-                event_name=schedule_name,
-                description=f"PagerDuty on-call: {schedule_name}",
-                start=entry_start,
-                end=entry_end,
-                duration_minutes=duration_minutes,
-            ))
+            # Weekday: split around office hours (8:00–16:00 UTC)
+            segments = []
+            if entry_start < office_start:
+                seg_end = min(entry_end, office_start)
+                duration = int((seg_end - entry_start).total_seconds() / 60)
+                if duration > 0:
+                    segments.append((base_id, entry_start, seg_end, duration))
+            if entry_end > office_end:
+                seg_start = max(entry_start, office_end)
+                duration = int((entry_end - seg_start).total_seconds() / 60)
+                if duration > 0:
+                    segments.append((f"{base_id}-after", seg_start, entry_end, duration))
+
+            for seg_id, seg_start, seg_end, duration_minutes in segments:
+                result.append(CalendarEvent(
+                    id=seg_id,
+                    event_name=schedule_name,
+                    description=f"PagerDuty on-call: {schedule_name}",
+                    start=seg_start,
+                    end=seg_end,
+                    duration_minutes=duration_minutes,
+                ))
 
         return result
