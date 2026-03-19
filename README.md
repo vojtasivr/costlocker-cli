@@ -1,6 +1,6 @@
 # costlocker-cli
 
-A CLI tool to sync Google Calendar and PagerDuty on-call schedules to Costlocker timesheets.
+A CLI tool to sync Google Calendar, PagerDuty on-call schedules, and Azure DevOps activity to Costlocker timesheets.
 
 ## Installation
 
@@ -14,7 +14,7 @@ pip install -e .
 ```bash
 costlocker setup
 ```
-Configures your Costlocker API key, Google Calendar credentials, and optionally PagerDuty.
+Configures your Costlocker API key, Google Calendar credentials, and optionally PagerDuty and Azure DevOps.
 
 ### 2. Set up Google Calendar credentials
 
@@ -76,6 +76,12 @@ Config is stored at `~/.costlocker/config.json`:
     "api_key": "your-pagerduty-api-key",
     "user_id": "PXXXXXX",
     "schedule_ids": ["PXXXXXX", "PXXXXXX"]
+  },
+  "azure_devops": {
+    "pat": "your-personal-access-token",
+    "organization": "your-org",
+    "project": "your-project",
+    "user_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   }
 }
 ```
@@ -94,6 +100,12 @@ Unmapped events are shown in the preview but skipped when logging.
 ## PagerDuty integration
 
 When configured, on-call schedule entries are fetched alongside Google Calendar events and appear in the sync preview. Set up during `costlocker setup` — you'll need your PagerDuty API key and the schedule IDs to watch (found in the schedule URL: `pagerduty.com/schedules#PXXXXXX`).
+
+On weekdays, only out-of-office-hours segments are logged (before 08:00 and after 16:00). On weekends, the full on-call duration is logged.
+
+## Azure DevOps integration
+
+When configured, Product Backlog Items (BLIs) you touched and Pull Requests you created or reviewed on the target day are fetched and round-robined into the gap-fill schedule entries (the time slots not covered by calendar events). Set up during `costlocker setup` — you'll need a Personal Access Token with read access to Work Items and Pull Requests.
 
 ## Schedule behaviour
 
