@@ -66,3 +66,4 @@ class ScheduleEntry:
     activity_id: int | None = None
     subtask_id: int | None = None
     is_empty: bool = False
+    description: str = ""

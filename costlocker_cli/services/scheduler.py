@@ -58,6 +58,7 @@ def _to_schedule_entry(entry: TimeEntry) -> ScheduleEntry:
         budget_id=entry.budget_id,
         activity_id=entry.activity_id,
         subtask_id=entry.subtask_id,
+        description=entry.description,
     )
 
 

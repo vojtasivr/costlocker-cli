@@ -50,34 +50,73 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
     mapper = EventMapper(config.get("mappings", {}))
     entries = mapper.map(events)
 
+    ado_items: list[tuple[str, str]] = []
+    ado_config = config.get("azure_devops")
+    if ado_config and ado_config.get("pat"):
+        with console.status("Fetching Azure DevOps activity..."):
+            try:
+                from costlocker_cli.services.azuredevops import AzureDevOpsClient
+                ado_client = AzureDevOpsClient(
+                    ado_config["pat"],
+                    ado_config["organization"],
+                    ado_config["project"],
+                )
+                ado_items = ado_client.get_daily_items(target_date, ado_config["user_id"])
+            except Exception as e:
+                console.print(f"[yellow]Azure DevOps fetch failed, skipping: {e}[/yellow]")
+
+    entries.sort(key=lambda entry: entry.start.replace(tzinfo=None))
     _print_entries_table(entries)
+
+    if ado_items:
+        # Deduplicate BLIs while preserving order; CRs are kept as-is
+        seen_blis: set[str] = set()
+        deduped: list[tuple[str, str]] = []
+        for name, kind in ado_items:
+            if kind == "bli":
+                if name not in seen_blis:
+                    seen_blis.add(name)
+                    deduped.append((name, kind))
+            else:
+                deduped.append((name, kind))
+
+        _print_ado_table(deduped)
+
+        # Round-robin BLIs into unmapped entries
+        blis = [name for name, kind in deduped if kind == "bli"]
+        unmapped = sorted(
+            [entry for entry in entries if entry.budget_id is None],
+            key=lambda entry: entry.start.replace(tzinfo=None),
+        )
+        if blis and unmapped:
+            buckets: list[list[str]] = [[] for _ in unmapped]
+            for i, bli in enumerate(blis):
+                buckets[i % len(unmapped)].append(bli)
+            for entry, bucket in zip(unmapped, buckets):
+                if bucket:
+                    entry.event_name = ", ".join(bucket)
 
     if dry_run:
         console.print("\n[yellow]Dry run — nothing was logged.[/yellow]")
-        raise typer.Exit(0)
-
-    entries_to_log = entries
-    if interactive:
-        entries_to_log = [
-            e for e in entries
-            if typer.confirm(f"Log '{e.event_name}' ({e.duration_minutes}m) to {e.project_name or 'unmapped'}?")
-        ]
-
-    if not entries_to_log:
-        console.print("[yellow]No entries to log.[/yellow]")
         raise typer.Exit(0)
 
     client = CostlockerClient(config["costlocker_api_key"])
     schedule_config = config.get("schedule", {})
     schedule = prepare_schedule(
         target_date,
-        entries_to_log,
+        entries,
         work_start_time=schedule_config.get("work_start", "08:30"),
         work_end_time=schedule_config.get("work_end", "17:00"),
         lunch_start_time=schedule_config.get("lunch_start", "11:00"),
     )
 
     _print_schedule_table(schedule, target_date)
+
+    if interactive:
+        schedule = [
+            e for e in schedule
+            if e.is_empty or typer.confirm(f"Log '{e.event_name}' ({e.duration_minutes}m) to {e.project_name or 'unmapped'}?")
+        ]
 
     if not typer.confirm("Post this schedule to Costlocker?"):
         console.print("[yellow]Cancelled.[/yellow]")
@@ -100,15 +139,28 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
                 console.print(f"   [red]{r['error']}[/red]")
 
 
+def _print_ado_table(items: list[tuple[str, str]]) -> None:
+    table = Table(title="Azure DevOps activity")
+    table.add_column("#", style="dim", width=4)
+    table.add_column("Type", style="magenta", width=4)
+    table.add_column("Item", style="cyan")
+    for i, (name, kind) in enumerate(items, 1):
+        table.add_row(str(i), kind.upper(), name)
+    console.print(table)
+
+
 def _print_entries_table(entries: list[TimeEntry]) -> None:
     table = Table(title="Events to log")
-    table.add_column("Calendar Event", style="cyan")
+    table.add_column("Time", style="cyan", no_wrap=True)
     table.add_column("Duration", style="green")
+    table.add_column("Calendar Event", style="cyan")
     table.add_column("Costlocker Project", style="yellow")
     table.add_column("Status", style="white")
     for entry in entries:
+        start = entry.start.replace(tzinfo=None).strftime("%H:%M")
+        end = entry.end.replace(tzinfo=None).strftime("%H:%M")
         status = "mapped" if entry.budget_id else "unmapped"
-        table.add_row(entry.event_name, f"{entry.duration_minutes}m", entry.project_name or "—", status)
+        table.add_row(f"{start} - {end}", f"{entry.duration_minutes}m", entry.event_name, entry.project_name or "—", status)
     console.print(table)
 
 

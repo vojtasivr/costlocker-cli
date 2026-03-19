@@ -77,7 +77,7 @@ class CostlockerClient:
                 "assignmentKey": assignment_key,
                 "startAt": entry.calculated_start,
                 "endAt": entry.calculated_end,
-                "description": entry.event_name,
+                "description": entry.description or entry.event_name,
             }]
         }
 

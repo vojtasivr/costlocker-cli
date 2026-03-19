@@ -95,6 +95,29 @@ def setup_config():
 
         pagerduty = {"api_key": pd_api_key, "user_id": user_id, "schedule_ids": schedule_ids}
 
+    console.print("\n[bold]Step 5: Azure DevOps (optional)[/bold]")
+    setup_ado = typer.confirm("Set up Azure DevOps sync?", default=bool(existing.get("azure_devops")))
+
+    existing_ado = existing.get("azure_devops", {})
+    azure_devops: Optional[Dict] = None
+
+    if setup_ado:
+        ado_pat = typer.prompt("Azure DevOps Personal Access Token", default=existing_ado.get("pat", ""), hide_input=True)
+        ado_org = typer.prompt("Azure DevOps organization", default=existing_ado.get("organization", ""))
+        ado_project = typer.prompt("Azure DevOps project", default=existing_ado.get("project", ""))
+
+        ado_user_id = existing_ado.get("user_id", "")
+        if ado_pat and ado_org and not ado_user_id:
+            try:
+                from costlocker_cli.services.azuredevops import AzureDevOpsClient
+                with console.status("Fetching Azure DevOps user..."):
+                    ado_user_id = AzureDevOpsClient(ado_pat, ado_org, ado_project).get_current_user_id()
+                console.print(f"[green]Azure DevOps user ID: {ado_user_id}[/green]")
+            except Exception as e:
+                console.print(f"[yellow]Could not fetch Azure DevOps user ID: {e}[/yellow]")
+
+        azure_devops = {"pat": ado_pat, "organization": ado_org, "project": ado_project, "user_id": ado_user_id}
+
     config = {
         "costlocker_api_key": api_key,
         "schedule": {"work_start": work_start, "work_end": work_end, "lunch_start": lunch_start},
@@ -102,6 +125,8 @@ def setup_config():
     }
     if pagerduty:
         config["pagerduty"] = pagerduty
+    if azure_devops:
+        config["azure_devops"] = azure_devops
 
     save_config(config)
     console.print(f"\nConfig saved to [cyan]{CONFIG_PATH}[/cyan]")
