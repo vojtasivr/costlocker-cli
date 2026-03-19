@@ -15,11 +15,10 @@ app = typer.Typer(help="Sync Google Calendar events to Costlocker timesheets", n
 @app.command()
 def sync(
     date_str: Optional[str] = typer.Option(None, "--date", "-d", help="Date to sync (YYYY-MM-DD). Defaults to today."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be logged without actually logging it."),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactively confirm each event before logging."),
 ) -> None:
     """Fetch Google Calendar events and log them to Costlocker."""
-    sync_command(date_str, dry_run, interactive)
+    sync_command(date_str, interactive)
 
 
 @app.command()

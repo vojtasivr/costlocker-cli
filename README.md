@@ -35,7 +35,6 @@ costlocker map
 ```bash
 costlocker sync                      # Sync today
 costlocker sync --date 2025-02-28    # Sync a specific date
-costlocker sync --dry-run            # Preview without logging
 costlocker sync --interactive        # Confirm each event interactively
 ```
 
@@ -48,7 +47,6 @@ costlocker sync --interactive        # Confirm each event interactively
 | `costlocker list-mappings` | Show all mappings |
 | `costlocker sync` | Sync today's events |
 | `costlocker sync --date YYYY-MM-DD` | Sync a specific date |
-| `costlocker sync --dry-run` | Preview without logging |
 | `costlocker sync --interactive` | Confirm each event |
 
 ## Config file

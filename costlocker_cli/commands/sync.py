@@ -17,7 +17,7 @@ from costlocker_cli.services.scheduler import prepare_schedule
 console = Console()
 
 
-def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> None:
+def sync_command(date_str: Optional[str], interactive: bool) -> None:
     target_date = date.fromisoformat(date_str) if date_str else date.today()
     console.print(f"\nSyncing events for [bold]{target_date}[/bold]\n")
 
@@ -67,11 +67,11 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
 
     entries.sort(key=lambda entry: entry.start.replace(tzinfo=None))
     _print_entries_table(entries)
+    deduped: list[tuple[str, str]] = []
 
     if ado_items:
         # Deduplicate BLIs while preserving order; CRs are kept as-is
         seen_blis: set[str] = set()
-        deduped: list[tuple[str, str]] = []
         for name, kind in ado_items:
             if kind == "bli":
                 if name not in seen_blis:
@@ -82,24 +82,6 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
 
         _print_ado_table(deduped)
 
-        # Round-robin BLIs into unmapped entries
-        blis = [name for name, kind in deduped if kind == "bli"]
-        unmapped = sorted(
-            [entry for entry in entries if entry.budget_id is None],
-            key=lambda entry: entry.start.replace(tzinfo=None),
-        )
-        if blis and unmapped:
-            buckets: list[list[str]] = [[] for _ in unmapped]
-            for i, bli in enumerate(blis):
-                buckets[i % len(unmapped)].append(bli)
-            for entry, bucket in zip(unmapped, buckets):
-                if bucket:
-                    entry.event_name = ", ".join(bucket)
-
-    if dry_run:
-        console.print("\n[yellow]Dry run — nothing was logged.[/yellow]")
-        raise typer.Exit(0)
-
     client = CostlockerClient(config["costlocker_api_key"])
     schedule_config = config.get("schedule", {})
     schedule = prepare_schedule(
@@ -109,6 +91,19 @@ def sync_command(date_str: Optional[str], dry_run: bool, interactive: bool) -> N
         work_end_time=schedule_config.get("work_end", "17:00"),
         lunch_start_time=schedule_config.get("lunch_start", "11:00"),
     )
+
+    if ado_items:
+        # Round-robin BLIs into gap-fill (created) schedule entries only
+        created = [entry for entry in schedule if entry.is_empty]
+        blis = [name for name, kind in deduped]
+        if blis and created:
+            buckets: list[list[str]] = [[] for _ in created]
+            for i, name in enumerate(blis):
+                buckets[i % len(created)].append(name)
+            for entry, bucket in zip(created, buckets):
+                if bucket:
+                    entry.event_name = ", ".join(bucket)
+                    entry.is_empty = False
 
     _print_schedule_table(schedule, target_date)
 
