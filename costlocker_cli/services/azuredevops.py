@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import httpx
 
@@ -33,7 +33,7 @@ class AzureDevOpsClient:
         return items
 
     def _get_pull_requests(self, target_date: date, user_id: str) -> list[tuple[str, str]]:
-        day_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc)
+        day_start = datetime.combine(target_date, time.min, timezone.utc)
         day_end = day_start + timedelta(days=1)
 
         result: dict[str, str] = {}  # name -> kind, preserving insertion order + dedup
@@ -86,6 +86,16 @@ class AzureDevOpsClient:
             return [(f"{title} - CR", "bli") for title in linked_pbis]
         return [(pr["title"], "cr")]
 
+    def _fetch_work_items(self, ids: list[int], fields: str) -> list[dict]:
+        response = httpx.get(
+            f"{self.base_url}/wit/workitems",
+            headers=self.headers,
+            params={"ids": ",".join(str(i) for i in ids), "fields": fields, "api-version": "7.0"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json().get("value", [])
+
     def _get_pr_linked_pbis(self, repo_id: str, pr_id: int) -> list[str]:
         response = httpx.get(
             f"{self.base_url}/git/repositories/{repo_id}/pullRequests/{pr_id}/workitems",
@@ -97,18 +107,10 @@ class AzureDevOpsClient:
         refs = response.json().get("value", [])
         if not refs:
             return []
-
-        ids = ",".join(str(item["id"]) for item in refs)
-        response = httpx.get(
-            f"{self.base_url}/wit/workitems",
-            headers=self.headers,
-            params={"ids": ids, "fields": "System.Title,System.WorkItemType", "api-version": "7.0"},
-            timeout=10,
-        )
-        response.raise_for_status()
+        items = self._fetch_work_items([item["id"] for item in refs], "System.Title,System.WorkItemType")
         return [
             f"BLI {item['id']}: {item['fields']['System.Title']}"
-            for item in response.json().get("value", [])
+            for item in items
             if item["fields"].get("System.WorkItemType") == "Product Backlog Item"
         ]
 
@@ -127,15 +129,15 @@ class AzureDevOpsClient:
         return False
 
     def _get_product_backlog_items(self, target_date: date) -> list[tuple[str, str]]:
-        day_start = f"{target_date}T00:00:00Z"
-        day_end = f"{target_date + timedelta(days=1)}T00:00:00Z"
+        day_start = datetime.combine(target_date, time.min, timezone.utc)
+        day_end = day_start + timedelta(days=1)
 
         wiql = {
             "query": (
                 "SELECT [System.Id], [System.Title] FROM WorkItems "
                 "WHERE [System.WorkItemType] = 'Product Backlog Item' "
-                f"AND [System.ChangedDate] >= '{day_start}' "
-                f"AND [System.ChangedDate] < '{day_end}' "
+                f"AND [System.ChangedDate] >= '{day_start.isoformat()}' "
+                f"AND [System.ChangedDate] < '{day_end.isoformat()}' "
                 "AND [System.ChangedBy] = @Me"
             )
         }
@@ -153,16 +155,5 @@ class AzureDevOpsClient:
         if not work_item_refs:
             return []
 
-        ids = ",".join(str(item["id"]) for item in work_item_refs)
-        response = httpx.get(
-            f"{self.base_url}/wit/workitems",
-            headers=self.headers,
-            params={"ids": ids, "fields": "System.Title", "api-version": "7.0"},
-            timeout=10,
-        )
-        response.raise_for_status()
-
-        return [
-            (f"BLI {item['id']}: {item['fields']['System.Title']}", "bli")
-            for item in response.json().get("value", [])
-        ]
+        items = self._fetch_work_items([item["id"] for item in work_item_refs], "System.Title")
+        return [(f"BLI {item['id']}: {item['fields']['System.Title']}", "bli") for item in items]

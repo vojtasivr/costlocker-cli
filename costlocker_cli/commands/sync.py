@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from costlocker_cli.config import load_config
+from costlocker_cli.config import require_config
 from costlocker_cli.mapper import EventMapper
 from costlocker_cli.models import ScheduleEntry, TimeEntry
 from costlocker_cli.services.calendar import get_calendar_events
@@ -21,10 +21,7 @@ def sync_command(date_str: Optional[str], interactive: bool) -> None:
     target_date = date.fromisoformat(date_str) if date_str else date.today()
     console.print(f"\nSyncing events for [bold]{target_date}[/bold]\n")
 
-    config = load_config()
-    if not config:
-        console.print("[red]No config found. Run `costlocker setup` first.[/red]")
-        raise typer.Exit(1)
+    config = require_config()
 
     with console.status("Fetching Google Calendar events..."):
         events = get_calendar_events(target_date)
@@ -68,18 +65,13 @@ def sync_command(date_str: Optional[str], interactive: bool) -> None:
     entries.sort(key=lambda entry: entry.start.replace(tzinfo=None))
     _print_entries_table(entries)
     deduped: list[tuple[str, str]] = []
-
     if ado_items:
-        # Deduplicate BLIs while preserving order; CRs are kept as-is
-        seen_blis: set[str] = set()
+        seen: set[str] = set()
         for name, kind in ado_items:
-            if kind == "bli":
-                if name not in seen_blis:
-                    seen_blis.add(name)
-                    deduped.append((name, kind))
-            else:
+            if kind != "bli" or name not in seen:
+                if kind == "bli":
+                    seen.add(name)
                 deduped.append((name, kind))
-
         _print_ado_table(deduped)
 
     client = CostlockerClient(config["costlocker_api_key"])
@@ -92,18 +84,13 @@ def sync_command(date_str: Optional[str], interactive: bool) -> None:
         lunch_start_time=schedule_config.get("lunch_start", "11:00"),
     )
 
-    if ado_items:
-        # Round-robin BLIs into gap-fill (created) schedule entries only
-        created = [entry for entry in schedule if entry.is_empty]
-        blis = [name for name, kind in deduped]
-        if blis and created:
-            buckets: list[list[str]] = [[] for _ in created]
-            for i, name in enumerate(blis):
-                buckets[i % len(created)].append(name)
-            for entry, bucket in zip(created, buckets):
-                if bucket:
-                    entry.event_name = ", ".join(bucket)
-                    entry.is_empty = False
+    blis = [name for name, kind in deduped]
+    created = [entry for entry in schedule if entry.is_empty]
+    if blis and created:
+        for i, entry in enumerate(created):
+            if bucket := blis[i::len(created)]:
+                entry.event_name = ", ".join(bucket)
+                entry.is_empty = False
 
     _print_schedule_table(schedule, target_date)
 

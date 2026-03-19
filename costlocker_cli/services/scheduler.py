@@ -22,9 +22,7 @@ def prepare_schedule(
     lunch_start = datetime.fromisoformat(f"{target_date}T{lunch_start_time}:00")
     lunch_end = lunch_start + timedelta(minutes=LUNCH_DURATION_MINUTES)
 
-    sorted_entries = sorted(entries, key=lambda e: e.start)
-
-    schedule_entries = [_to_schedule_entry(e) for e in sorted_entries]
+    schedule_entries = [_to_schedule_entry(e) for e in entries]
 
     schedule: list[ScheduleEntry] = []
     current = work_start

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pickle
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -20,8 +20,8 @@ def get_calendar_events(target_date: date) -> list[CalendarEvent]:
     creds = _get_credentials()
     service = build("calendar", "v3", credentials=creds)
 
-    start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc)
-    end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
+    start = datetime.combine(target_date, time.min, timezone.utc)
+    end = start + timedelta(days=1)
 
     result = service.events().list(
         calendarId="primary",

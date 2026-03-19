@@ -4,17 +4,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from costlocker_cli.config import load_config, save_config
+from costlocker_cli.config import require_config, save_config
 from costlocker_cli.services.costlocker import CostlockerClient
 
 console = Console()
 
 
 def map_command() -> None:
-    config = load_config()
-    if not config:
-        console.print("[red]No config found. Run `costlocker setup` first.[/red]")
-        raise typer.Exit(1)
+    config = require_config()
 
     client = CostlockerClient(config["costlocker_api_key"])
 

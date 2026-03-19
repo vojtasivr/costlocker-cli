@@ -16,6 +16,14 @@ def load_config() -> Optional[Dict]:
         return json.load(f)
 
 
+def require_config() -> Dict:
+    config = load_config()
+    if not config:
+        console.print("[red]No config found. Run `costlocker setup` first.[/red]")
+        raise typer.Exit(1)
+    return config
+
+
 def save_config(config: Dict):
     """Save config to ~/.costlocker/config.json"""
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
