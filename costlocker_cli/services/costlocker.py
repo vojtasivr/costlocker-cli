@@ -77,7 +77,7 @@ class CostlockerClient:
                 "assignmentKey": assignment_key,
                 "startAt": entry.calculated_start,
                 "endAt": entry.calculated_end,
-                "description": entry.description or entry.event_name,
+                "description": entry.event_name,
             }]
         }
 
@@ -87,7 +87,7 @@ class CostlockerClient:
                 return {"success": False, "entry": entry, "errors": data["errors"]}
             return {"success": True, "entry": entry}
         except httpx.HTTPStatusError as e:
-            return {"success": False, "entry": entry, "error": str(e)}
+            return {"success": False, "entry": entry, "error": f"{e} — {e.response.text}"}
 
     def _post(self, payload: dict) -> dict:
         response = httpx.post(BASE_URL, headers=self.headers, json=payload, timeout=10)
