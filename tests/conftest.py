@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -18,7 +18,7 @@ def make_event(
     description: str = "",
     tz_aware: bool = False,
 ) -> CalendarEvent:
-    tz = timezone.utc if tz_aware else None
+    tz = UTC if tz_aware else None
     s = datetime.fromisoformat(f"{TARGET_DATE_STR}T{start}:00").replace(tzinfo=tz)
     e = datetime.fromisoformat(f"{TARGET_DATE_STR}T{end}:00").replace(tzinfo=tz)
     duration = int((e - s).total_seconds() / 60)
@@ -33,7 +33,7 @@ def make_entry(
     tz_aware: bool = False,
     **kwargs,
 ) -> TimeEntry:
-    tz = timezone.utc if tz_aware else None
+    tz = UTC if tz_aware else None
     s = datetime.fromisoformat(f"{TARGET_DATE_STR}T{start}:00").replace(tzinfo=tz)
     e = datetime.fromisoformat(f"{TARGET_DATE_STR}T{end}:00").replace(tzinfo=tz)
     duration = int((e - s).total_seconds() / 60)

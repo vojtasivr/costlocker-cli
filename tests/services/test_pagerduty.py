@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import httpx
 import pytest
@@ -99,7 +99,7 @@ class TestWeekdayOncall:
         )
         events = client.get_oncall_events(MONDAY, [SCHEDULE_ID], USER_ID)
         before = next(e for e in events if "after" not in e.id)
-        assert before.end == datetime(2024, 1, 15, 8, 0, tzinfo=timezone.utc)
+        assert before.end == datetime(2024, 1, 15, 8, 0, tzinfo=UTC)
 
     @respx.mock
     def test_after_segment_starts_at_office_end(self, client):
@@ -110,7 +110,7 @@ class TestWeekdayOncall:
         )
         events = client.get_oncall_events(MONDAY, [SCHEDULE_ID], USER_ID)
         after = next(e for e in events if "after" in e.id)
-        assert after.start == datetime(2024, 1, 15, 16, 0, tzinfo=timezone.utc)
+        assert after.start == datetime(2024, 1, 15, 16, 0, tzinfo=UTC)
 
     @respx.mock
     def test_entry_starting_exactly_at_office_start_has_no_before_segment(self, client):

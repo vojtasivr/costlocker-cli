@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 import httpx
 
@@ -33,7 +33,7 @@ class AzureDevOpsClient:
         return items
 
     def _get_pull_requests(self, target_date: date, user_id: str) -> list[tuple[str, str]]:
-        day_start = datetime.combine(target_date, time.min, timezone.utc)
+        day_start = datetime.combine(target_date, time.min, UTC)
         day_end = day_start + timedelta(days=1)
 
         result: dict[str, str] = {}  # name -> kind, preserving insertion order + dedup
@@ -129,7 +129,7 @@ class AzureDevOpsClient:
         return False
 
     def _get_product_backlog_items(self, target_date: date) -> list[tuple[str, str]]:
-        day_start = datetime.combine(target_date, time.min, timezone.utc)
+        day_start = datetime.combine(target_date, time.min, UTC)
         day_end = day_start + timedelta(days=1)
 
         wiql = {

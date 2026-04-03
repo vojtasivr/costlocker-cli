@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from costlocker_cli.mapper import EventMapper
 from tests.conftest import make_event
 

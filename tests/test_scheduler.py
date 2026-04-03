@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
-
-import pytest
-
 from costlocker_cli.services.scheduler import prepare_schedule
 from tests.conftest import TARGET_DATE, make_entry
 
