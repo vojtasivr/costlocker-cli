@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 import httpx
 
@@ -23,7 +23,7 @@ class PagerDutyClient:
         return response.json()["user"]["id"]
 
     def get_oncall_events(self, target_date: date, schedule_ids: list[str], user_id: str) -> list[CalendarEvent]:
-        day_start = datetime.combine(target_date, time.min, timezone.utc)
+        day_start = datetime.combine(target_date, time.min, UTC)
         day_end = day_start + timedelta(days=1)
 
         events: list[CalendarEvent] = []

@@ -8,6 +8,14 @@ A CLI tool to sync Google Calendar, PagerDuty on-call schedules, and Azure DevOp
 pip install -e .
 ```
 
+## Development
+
+```bash
+pip install -e ".[dev]"
+python -m pytest
+python -m ruff check .
+```
+
 ## Quick Start
 
 ### 1. Run setup

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from costlocker_cli.commands.list_mappings import list_mappings_command
@@ -14,7 +12,7 @@ app = typer.Typer(help="Sync Google Calendar events to Costlocker timesheets", n
 
 @app.command()
 def sync(
-    date_str: Optional[str] = typer.Option(None, "--date", "-d", help="Date to sync (YYYY-MM-DD). Defaults to today."),
+    date_str: str | None = typer.Option(None, "--date", "-d", help="Date to sync (YYYY-MM-DD). Defaults to today."),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactively confirm each event before logging."),
 ) -> None:
     """Fetch Google Calendar events and log them to Costlocker."""

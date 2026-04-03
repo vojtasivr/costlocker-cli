@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Optional, Dict
+
 import typer
 from rich.console import Console
 
@@ -8,7 +8,7 @@ CONFIG_PATH = Path.home() / ".costlocker" / "config.json"
 console = Console()
 
 
-def load_config() -> Optional[Dict]:
+def load_config() -> dict | None:
     """Load config from ~/.costlocker/config.json"""
     if not CONFIG_PATH.exists():
         return None
@@ -16,7 +16,7 @@ def load_config() -> Optional[Dict]:
         return json.load(f)
 
 
-def require_config() -> Dict:
+def require_config() -> dict:
     config = load_config()
     if not config:
         console.print("[red]No config found. Run `costlocker setup` first.[/red]")
@@ -24,7 +24,7 @@ def require_config() -> Dict:
     return config
 
 
-def save_config(config: Dict):
+def save_config(config: dict):
     """Save config to ~/.costlocker/config.json"""
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CONFIG_PATH, "w") as f:
@@ -81,7 +81,7 @@ def setup_config():
     setup_pagerduty = typer.confirm("Set up PagerDuty on-call sync?", default=bool(existing.get("pagerduty")))
 
     existing_pd = existing.get("pagerduty", {})
-    pagerduty: Optional[Dict] = None
+    pagerduty: dict | None = None
 
     if setup_pagerduty:
         pd_api_key = typer.prompt("PagerDuty API key", default=existing_pd.get("api_key", ""), hide_input=True)
@@ -107,7 +107,7 @@ def setup_config():
     setup_ado = typer.confirm("Set up Azure DevOps sync?", default=bool(existing.get("azure_devops")))
 
     existing_ado = existing.get("azure_devops", {})
-    azure_devops: Optional[Dict] = None
+    azure_devops: dict | None = None
 
     if setup_ado:
         ado_pat = typer.prompt("Azure DevOps Personal Access Token", default=existing_ado.get("pat", ""), hide_input=True)

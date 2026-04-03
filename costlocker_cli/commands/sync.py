@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -17,7 +16,7 @@ from costlocker_cli.services.scheduler import prepare_schedule
 console = Console()
 
 
-def sync_command(date_str: Optional[str], interactive: bool) -> None:
+def sync_command(date_str: str | None, interactive: bool) -> None:
     target_date = date.fromisoformat(date_str) if date_str else date.today()
     console.print(f"\nSyncing events for [bold]{target_date}[/bold]\n")
 
